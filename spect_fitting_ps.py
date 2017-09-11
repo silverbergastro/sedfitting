@@ -6,7 +6,7 @@ import os.path
 from scipy.constants import h,k,c
 from scipy.optimize import curve_fit, brute
 from astropy.io import ascii
-from synth_phot import fluxdrive_star, fluxdrive_plot, fluxdrive_disk, fluxdrive_disk_test, import_filter, uniq
+#from synth_phot import fluxdrive_star, fluxdrive_plot, fluxdrive_disk, fluxdrive_disk_test, import_filter, uniq
 
 def import_filter(filtername):
     '''Import filter information--response curve'''
@@ -47,6 +47,43 @@ def uniq(inputlist):
     seen_add = seen.add #Initialize other function
     return [x for x in inputlist if not (x in seen or seen_add(x))]
 
+def synth_phot(filt_dict, spec_X, f_lambda_slightly_less_wrong_units, den):
+    filt_X = np.array(sorted(filt_dict.keys()))
+    filt_S = np.zeros(filt_X.size)
+    #Make sure wavelength/sensitivity correspondence works
+    for i in range(filt_S.size):
+        filt_S[i] = filt_dict[filt_X[i]]
+
+    #Convert filtX to list
+    temp_filtx = list(filt_X)
+
+    #Get limits for filter size
+    wmin = min(filt_X)
+    wmax = max(filt_X)
+
+    #Get wavelength range inside filter
+    temp_specx1 = [i for i in list(spec_X) if i >= wmin]
+    temp_specx2 = [i for i in temp_specx1 if i <= wmax]
+
+    #Create grid of filtx and specx, in order, for convolution purposes
+    wgridlist = temp_filtx + temp_specx2
+    wgridlist.sort()
+
+    #Reduce grid to unique values
+    wgrid_use = uniq(wgridlist)
+    wgrid = np.array(wgrid_use)
+
+    #Interpolate filter sensitivity onto combined grid
+    Sg = np.interp(wgrid, filt_X, filt_S)
+
+    #Interpolate f_lambda onto combined grid
+    Sf = np.interp(wgrid, spec_X, f_lambda_slightly_less_wrong_units) 
+
+    #Multiply response curve by f_lambda, integrate over
+    num = np.trapz(Sf*Sg, x=wgrid)
+
+    return num/den
+	
 #Rename variable for clarity
 kB = k
 
