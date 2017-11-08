@@ -140,7 +140,7 @@ def fcn2min(x_wav_data999, params, has_ps):
     '''Function to minimize to get flux data'''
     Teff = params[0]
     frac_r_d = params[1]
-    has_ps = False
+    #has_ps = False
     
     #Get filter names
     if has_ps:
@@ -290,90 +290,110 @@ def driver:
     '''Vector includes WISE ID, and alternating magnitudes and errors, in order: Jmag, Jerr, Hmag, Herr, Kmag Kerr, W1mag, W1err, W2mag, W2err, W3mag, W3err, W4mag, W4err, gmag, gerr, 
     rmag, rerr, imag, ierr, zmag, zerr, ymag, yerr. Convert magnitudes to fluxes, calls fitting function to get best fit stellar temperature and radius/distance factor (r^2/d^2).'''
     
-    datavec = get_data(filename)
+    df = pandas.read_csv('mdwarf_fitting_pool_formatted.csv')
+    data = df.values
     
-    has_ps = False
+    f1 = open('characteristic_outputs.csv','w')
     
-    if (len(datavec) > 15) and (float(datavec[15]) < 100.):
-        has_ps = True
+    
+    for line in data:
+        has_ps = False
+        nancheck = False
+        has_val = True
+        write_string = ''
+    
+        #Read datavec into variable
+        wise_id = line[0]
+        w1mag = line[1]
+        w1err = line[2]
+        w2mag = line[3]
+        w2err = line[4]
+        w3mag = line[5]
+        w3err = line[6]
+        w4mag = line[7]
+        w4err = line[8]
+        jmag = line[9]
+        jerr = line[10]
+        hmag = line[11]
+        herr = line[12]
+        kmag = line[13]
+        kerr = line[14]
+        gmag = line[15]
+        gerr = line[16]
+        imag = line[17]
+        ierr = line[18]
+        rmag = line[19]
+        rerr = line[20]
+        ymag = line[21]
+        yerr = line[22]
+        zmag = line[23]
+        zerr = line[24]
+
+        #for i in range(15,25):
+        #    if np.isnan(line[i]) and not nancheck:
+        #        nancheck = True
+
+        #for i in range(15,25):
+        #    if data[i] < -998. and not has_val:
+        #        has_val = True
+                
+        #if not nancheck and not has_val:
+        #    has_ps = True
         
-    #Read datavec into variable
-    wise_id = datavec[0]
-    jmag = float(datavec[1])
-    jerr = float(datavec[2])
-    hmag = float(datavec[3])
-    herr = float(datavec[4])
-    kmag = float(datavec[5])
-    kerr = float(datavec[6])
-    w1mag = float(datavec[7])
-    w1err = float(datavec[8])
-    w2mag = float(datavec[9])
-    w2err = float(datavec[10])
-    w3mag = float(datavec[11])
-    w3err = float(datavec[12])
-    w4mag = float(datavec[13])
-    w4err = float(datavec[14])
-    
-    if has_ps:
-        gmag = float(datavec[15])
-        gerr = float(datavec[16])
-        rmag = float{datavec[17])
-        rerr = float(datavec[18])
-        imag = float(datavec[19])
-        ierr = float(datavec[20])
-        zmag = float(datavec[21])
-        zerr = float(datavec[22])
-        ymag = float(datavec[23])
-        yerr = float(datavec[24])
         
-    #List of filter names in both cases
-    if has_ps:
-        filt_names = ['g','r','i','z','y','J','H','K','W1','W2','W3','W4']
-    else:
-        filt_names = ['J','H','K','W1','W2','W3','W4']
+        #List of filter names in both cases
+        if has_ps:
+            filt_names = ['g','r','i','z','y','J','H','K','W1','W2','W3','W4']
+        else:
+            filt_names = ['J','H','K','W1','W2','W3','W4']
+            
+        w1_w4_diff = w1mag - w4mag
+        w1_w4_unc = np.sqrt((w1err**2)+(w4err**2))
         
-    w1_w4_diff = w1mag - w4mag
-    w1_w4_unc = np.sqrt((w1err**2)+(w4err**2))
-    
-    w1_w3_diff = w1mag - w3mag
-    w1_w3_unc = np.sqrt((w1err**2)+(w3mag**2))
-    
-    mag_excess_difs = (w1_w4_diff, w1_w4_unc, w1_w3_diff, w1_w3_unc)
-    
-    filt_cent_wav = []
-    filt_zp = []
-    mag_vec = []
-    mag_err_vec = []
-    flux_vec = []
-    flux_err_vec = []
-    
-    
-    for filt_name in filt_names:
-        filt_cent_wav.append(central_wavelengths_dict[filt_name])
-        filt_zp.append(zero_points_dict[filt_name])
-    
-    
-    if has_ps:
-        #put mags and errors into vectors
-        mag_vec = [gmag, rmag, imag, zmag, ymag, jmag, hmag, kmag, w1mag, w2mag, w3mag, w4mag]
-        mag_err_vec = [gerr, rerr, ierr, zerr, yerr, jerr, herr, kerr, w1err, w2err, w3err, w4err]
-    else:
-        mag_vec = [jmag, hmag, kmag, w1mag, w2mag, w3mag, w4mag]
-        mag_err_vec = [jerr, herr, kerr, w1err, w2err, w3err, w4err]
+        w1_w3_diff = w1mag - w3mag
+        w1_w3_unc = np.sqrt((w1err**2)+(w3mag**2))
         
-    for i in range(len(filt_names)):
-        #convert mags to fluxes
-        flux_vec.append(get_flux(filt_zp[i], mag_vec[i]))
-        #Convert errors
-        flux_err_vec.append(get_flux_err(filt_zp[i], mag_vec[i], mag_err_vec[i]))
+        mag_excess_difs = (w1_w4_diff, w1_w4_unc, w1_w3_diff, w1_w3_unc)
         
-    #Get fits
-    Tstar, Tstar_error, rdstar, rdstar_error, Tdisk, Tdisk_error, xdisk, xdisk_error, lir_lstar, lir_lstar_error = get_fits(filt_cent_wav, np.array(flux_vec), np.array(flux_err_vec))
+        filt_cent_wav = []
+        filt_zp = []
+        mag_vec = []
+        mag_err_vec = []
+        flux_vec = []
+        flux_err_vec = []
+        
+        
+        for filt_name in filt_names:
+            filt_cent_wav.append(central_wavelengths_dict[filt_name])
+            filt_zp.append(zero_points_dict[filt_name])
+        
+        
+        if has_ps:
+            #put mags and errors into vectors
+            mag_vec = [gmag, rmag, imag, zmag, ymag, jmag, hmag, kmag, w1mag, w2mag, w3mag, w4mag]
+            mag_err_vec = [gerr, rerr, ierr, zerr, yerr, jerr, herr, kerr, w1err, w2err, w3err, w4err]
+        else:
+            mag_vec = [jmag, hmag, kmag, w1mag, w2mag, w3mag, w4mag]
+            mag_err_vec = [jerr, herr, kerr, w1err, w2err, w3err, w4err]
+            
+        for i in range(len(filt_names)):
+            #convert mags to fluxes
+            flux_vec.append(get_flux(filt_zp[i], mag_vec[i]))
+            #Convert errors
+            flux_err_vec.append(get_flux_err(filt_zp[i], mag_vec[i], mag_err_vec[i]))
+            
+        #Get fits
+        Tstar, Tstar_error, rdstar, rdstar_error, Tdisk, Tdisk_error, xdisk, xdisk_error, lir_lstar, lir_lstar_error = get_fits(filt_cent_wav, np.array(flux_vec), np.array(flux_err_vec))
+        
+        
+        write_string = wise_id+','+str(Tstar)+','+str(Tstar_error)+','+str(rdstar)+','+str(rdstar_error)+','+str(Tdisk)+','+str(Tdisk_error)+','+str(xdisk)+','+str(xdisk_error)+','+str(lir_lstar)+','+str(lir_lstar_error) +'\n'
+        
+        f1.write(write_string)
+        
+        #Plotting
+        #plot_status = plot_sed(wise_id, Tstar, Tstar_error, rdstar, rdstar_error, Tdisk, Tdisk_error, xdisk, xdisk_error, lir_lstar, lir_lstar_error, mag_excess_difs)
     
-    #Plotting
-    plot_status = plot_sed(wise_id, Tstar, Tstar_error, rdstar, rdstar_error, Tdisk, Tdisk_error, xdisk, xdisk_error, lir_lstar, lir_lstar_error, mag_excess_difs)
-    
-    print plot_status
+    print "Done"
     
             
 def get_flux(zero_point, magnitude):
